@@ -18,7 +18,27 @@ const SavedBooks = () => {
   // use this to determine if `useEffect()` hook needs to run again
   const userDataLength = Object.keys(userData).length;
   const { loading, data } = useQuery(ME);
-  const [RemoveBook] = useMutation(REMOVE_BOOK);
+  const [RemoveBook] = useMutation(REMOVE_BOOK, {
+    update(cache, { data: { removeBook } }) {
+      try {
+        const { savedBooks } = cache.readQuery({ query: ME });
+
+        cache.writeQuery({
+          query: ME,
+          data: { savedBooks: [savedBooks, ...savedBooks] },
+        });
+      } catch (e) {
+        console.error(e);
+      }
+
+      // update me object's cache
+      const { me } = cache.readQuery({ query: ME });
+      cache.writeQuery({
+        query: ME,
+        data: { me: { ...me, savedBooks: [...me.savedBooks, removeBook] } },
+      });
+    },
+  });
   const books = data?.me.savedBooks || [];
   console.log(books);
   // useEffect(() => {
@@ -58,7 +78,7 @@ const SavedBooks = () => {
       const { data } = await RemoveBook({
         variables: { bookId },
       });
-      window.location.reload();
+
       // upon success, remove book's id from localStorage
       removeBookId(bookId);
     } catch (err) {
